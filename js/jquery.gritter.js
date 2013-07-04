@@ -25,25 +25,25 @@
    ****************/
       text:'',
 
-   /**************** 
-         OPTIONAL 
+   /****************
+         OPTIONAL
    ****************/
       title:'', // title for the notification
       sticky: false, // fade out on it's own?
       image: undefined, // url of an image to show
-      
+
 		position: 'tr', // {string} 'tl', 'tr', 'br', 'bl', where should the notifications be located?
 		class_name: '', // could be set to 'gritter-light' to use white notifications
-      
+
       fade_out: true, // whether or not to fade out
 		fade_in_speed: 'medium', // how fast notifications fade in
 		fade_out_speed: 1000, // how fast the notices fade out
 		time: 6000, // hang on the screen for...
-		
+
 		collapse_speed: 300, // how fast the notices collapse
 		delay_collapse: true, // if true, element doesn't collapse
 		                      // until completely faded, if false, collapse happens simultaneously
-		                      
+
 		maximum: -1, // maximum growls to appear
 		overflow_collapse_speed: 250, // how fast should collapse occur when maximum is exceeded
       overflow_fade_out_speed: 600, // how fast should fade out occur when maximum is exceeded (if delayed)
@@ -114,7 +114,7 @@
 		add: function(params){
          // store this
          var _self = this;
-         
+
 			// Handle straight text
 			if(typeof(params) == 'string'){
 				params = {text:params};
@@ -138,7 +138,7 @@
 
 			this._verifyWrapper( params['position'] );
 			
-			var number = ++this._item_count, 
+			var number = ++this._item_count,
 				tmp = this._tpl_item;
 			
 			// Assign callbacks
@@ -185,7 +185,7 @@
 			// Bind the hover/unhover states
 			$(item).bind('mouseenter mouseleave', function(event){
 				if(event.type == 'mouseenter'){
-					if(!params.sticky){ 
+					if(!params.sticky){
 						_self._restoreItemIfFading($(this), number);
 					}
 				}
@@ -215,11 +215,11 @@
 		count: function( position ){
 		   return $('.gritter-notice-wrapper.' + position).children().length;
 		},
-		
+
 		/**
 		* Bring everything to a halt
 		* @param {Object} params A list of callback functions to pass when all notifications are removed
-		*/  
+		*/
 		stop: function( params ){
 			
 			// callbacks (if passed)
@@ -266,7 +266,7 @@
 		_isUpper:function( position ){
 		   return position == 'tr' || position == 'tl';
 		},
-		
+
 		/**
 		* Check whether we've exceeded the maximum number of displayed notifications
 		* @param {Object} parameters
