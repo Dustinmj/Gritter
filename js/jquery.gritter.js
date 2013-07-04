@@ -48,6 +48,7 @@
 		overflow_collapse_speed: 250, // how fast should collapse occur when maximum is exceeded
       overflow_fade_out_speed: 600, // how fast should fade out occur when maximum is exceeded (if delayed)
       overflow_delay_collapse: false, // delay collapse when maximum is exceeded?
+      overflow_kills_sticky: false, // does the bubbling effect remove sticky notifications?
 
       before_open: function(){}, // callbacks
       after_open: function(){},
@@ -122,7 +123,7 @@
          // handle blank input
          for( i in params )
          {
-            if( $.trim( '' + params[i] ).length == 0 )
+            if( $.trim( params[i].toString() ).length == 0 )
             {
                delete params[i];
             }
@@ -257,7 +258,9 @@
 		_checkMax: function( params ){
 			// check to see that we're not above the maximum currently
 			// if we are, remove the top one
-			var staticItems = $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
+			var staticItems = params.overflow_kills_sticky ?
+			                     $( '#gritter-notice-wrapper .gritter-static' ) :
+			                     $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
          while( params.maximum  > 0 && staticItems.length > params.maximum )
          {
             var p = $.extend( {}, params,  { 
@@ -266,7 +269,9 @@
                                                 delay_collapse: params.overflow_delay_collapse
                                             });
             this.removeSpecific( null, p , staticItems.first()  );
-            staticItems = $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
+			   var staticItems = params.overflow_kills_sticky ?
+			                        $( '#gritter-notice-wrapper .gritter-static' ) :
+			                        $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
          }
 		},
 
