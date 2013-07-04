@@ -450,11 +450,11 @@
 		* @param {String/Array} replace A list of things to replace the searches with
 		* @return {String} sa The output
 		*/  
-		_str_replace: function(search, replace, subject, count){
+		_str_replace: function(find, change, subject, count){
 		
 			var i = 0, j = 0, temp = '', repl = '', sl = 0, fl = 0,
-				f = [].concat(search),
-				r = [].concat(replace),
+				f = [].concat(find),
+				r = [].concat(change),
 				s = subject,
 				ra = r instanceof Array, sa = s instanceof Array;
 			s = [].concat(s);
