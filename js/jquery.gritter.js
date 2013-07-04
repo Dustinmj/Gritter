@@ -6,7 +6,7 @@
  * Dual licensed under the MIT and GPL licenses.
  *
  * Date: February 24, 2012
- * Version: 1.7.4
+ * Version: 1.8
  */
 
 (function($){
@@ -20,24 +20,40 @@
 	* Set up global options that the user can over-ride
 	*/
 	$.gritter.options = {
+   /**************** 
+         REQUIRED
+   ****************/
+      text:'',
 
+   /**************** 
+         OPTIONAL 
+   ****************/
+      title:'', // title for the notification
+      sticky: false, // fade out on it's own?
+      image: undefined, // url of an image to show
+      
 		position: '',
 		class_name: '', // could be set to 'gritter-light' to use white notifications
-
+      
+      fade_out: true, // whether or not to fade out
 		fade_in_speed: 'medium', // how fast notifications fade in
 		fade_out_speed: 1000, // how fast the notices fade out
-
+		time: 6000, // hang on the screen for...
+		
 		collapse_speed: 300, // how fast the notices collapse
 		delay_collapse: true, // if true, element doesn't collapse
 		                      // until completely faded, if false, collapse happens simultaneously
-
-		time: 6000, // hang on the screen for...
+		                      
 		maximum: -1, // maximum growls to appear
 		overflow_collapse_speed: 250, // how fast should collapse occur when maximum is exceeded
       overflow_fade_out_speed: 600, // how fast should fade out occur when maximum is exceeded (if delayed)
-      overflow_delay_collapse: false // delay collapse when maximum is exceeded?
+      overflow_delay_collapse: false, // delay collapse when maximum is exceeded?
 
-	}
+      before_open: function(){}, // callbacks
+      after_open: function(){},
+      before_close: function(){},
+      after_close: function(){}
+	};
 	
 	/**
 	* Add a gritter notification to the screen
@@ -46,7 +62,7 @@
 	$.gritter.add = function(params){
 
 		try {
-			return Gritter.add(params || {});
+			return $.gritter._implementation.add(params || {});
 		} catch(e) {
 		
 			var err = 'Gritter Error: ' + e;
@@ -63,7 +79,7 @@
 	* @see Gritter#removeSpecific();
 	*/
 	$.gritter.remove = function(id, params){
-		Gritter.removeSpecific(id, params || {});
+		$.gritter._implementation.removeSpecific(id, params || {});
 	}
 	
 	/**
@@ -71,20 +87,14 @@
 	* @see Gritter#stop();
 	*/
 	$.gritter.removeAll = function(params){
-		Gritter.stop(params || {});
+		$.gritter._implementation.stop(params || {});
 	}
 	
 	/**
 	* Big fat Gritter object
 	* @constructor (not really since its object literal)
 	*/
-	var Gritter = {
-		
-		// Public - options to over-ride with $.gritter.options in "add"
-		position: '',
-		fade_in_speed: '',
-		fade_out_speed: '',
-		time: '',
+	$.gritter._implementation = {
 		
 		// Private - no touchy the private parts
 		_custom_timer: 0,
@@ -101,7 +111,9 @@
 		* @return {Integer} The specific numeric id to that gritter notification
 		*/
 		add: function(params){
-
+         // store this
+         var _self = this;
+         
 			// Handle straight text
 			if(typeof(params) == 'string'){
 				params = {text:params};
@@ -123,52 +135,29 @@
 				throw 'You must supply "text" parameter.'; 
 			}
 
-			// Check the options and set them once
-			if(!this._is_setup){
-				this._runSetup();
-			}
-
-			// Basics
-			var title = params.title, 
-				 text = params.text,
-				 image = params.image || '',
-				 sticky = params.sticky || false,
-				 item_class = params.class_name,
-				 position = params.position,
-				 time_alive = params.time || '';
-
 			this._verifyWrapper();
 			
-			this._item_count++;
-			var number = this._item_count, 
+			var number = ++this._item_count, 
 				tmp = this._tpl_item;
 			
 			// Assign callbacks
 			$(['before_open', 'after_open', 'before_close', 'after_close']).each(function(i, val){
-				Gritter['_' + val + '_' + number] = ($.isFunction(params[val])) ? params[val] : function(){}
+				_self['_' + val + '_' + number] = ($.isFunction(params[val])) ? params[val] : function(){}
 			});
-
-			// Reset
-			this._custom_timer = 0;
 			
-			// A custom fade time set
-			if(time_alive){
-				this._custom_timer = time_alive;
-			}
-			
-			var image_str = (image != '') ? '<img src="' + image + '" class="gritter-image" />' : '',
-				class_name = (image != '') ? 'gritter-with-image' : 'gritter-without-image';
+			var image_str = params[ 'image' ] != undefined ? '<img src="' + params[ 'image' ] + '" class="gritter-image" />' : '',
+				class_name = params[ 'image' ] != undefined ? 'gritter-with-image' : 'gritter-without-image';
 			
 			// String replacements on the template
-			if(title){
-				title = this._str_replace('[[title]]',title,this._tpl_title);
+			if(params.title){
+				params.title = this._str_replace('[[title]]',params.title,this._tpl_title);
 			}else{
-				title = '';
+				params.title = '';
 			}
 			
 			tmp = this._str_replace(
 				['[[title]]', '[[text]]', '[[close]]', '[[image]]', '[[number]]', '[[class_name]]', '[[item_class]]'],
-				[title, text, this._tpl_close, image_str, this._item_count, class_name, item_class], tmp
+				[params.title, params.text, this._tpl_close, image_str, this._item_count, class_name, params.class_name], tmp
 			);
 
 			// If it's false, don't show another gritter message
@@ -176,50 +165,41 @@
 				return false;
 			}
 
-			$('#gritter-notice-wrapper').addClass(position).append(tmp);
+			$('#gritter-notice-wrapper').addClass(params.position).append(tmp);
 			
 			var item = $('#gritter-item-' + this._item_count).addClass( 'gritter-static' );
 			
-			item.fadeIn(this.fade_in_speed, function(){
-				Gritter['_after_open_' + number]($(this));
+			item.fadeIn(params['fade_in_speed'], function(){
+				_self['_after_open_' + number]($(this));
 			});
 			
-			if(!sticky){
-				this._setFadeTimer(item, number);
+			if(!params.sticky){
+				this._setFadeTimer(item, number, params);
+			}else{
+			   item.addClass( 'sticky' );
 			}
 			
 			// Bind the hover/unhover states
 			$(item).bind('mouseenter mouseleave', function(event){
 				if(event.type == 'mouseenter'){
-					if(!sticky){ 
-						Gritter._restoreItemIfFading($(this), number);
+					if(!params.sticky){ 
+						_self._restoreItemIfFading($(this), number);
 					}
 				}
 				else {
-					if(!sticky){
-						Gritter._setFadeTimer($(this), number);
+					if(!params.sticky){
+						_self._setFadeTimer( $(this), number, params );
 					}
 				}
-				Gritter._hoverState($(this), event.type);
+				_self._hoverState($(this), event.type);
 			});
 			
 			// Clicking (X) makes the perdy thing close
 			$(item).find('.gritter-close').click(function(){
-				Gritter.removeSpecific(number, {}, null, true);
+				_self.removeSpecific(number, {}, null, true);
 			});
 			
-			// check to see that we're not above the maximum currently
-			// if we are, remove the top one
-			var staticItems = $( '#gritter-notice-wrapper .gritter-static' );
-         while( params.maximum  > 0 && staticItems.length > params.maximum )
-         {
-            this.removeSpecific( null, { 
-                     speed: params.overflow_fade_out_speed,
-                     collapse_speed: params.overflow_collapse_speed,
-                     delay_collapse: params.overflow_delay_collapse
-                  }, staticItems.first()  );
-            staticItems = $( '#gritter-notice-wrapper .gritter-static' );
-         }
+			this._checkMax( params );
 
 			return number;
 		
@@ -231,6 +211,63 @@
 		*/
 		count: function(){
 		   return $('#gritter-notice-wrapper').children().length;
+		},
+		
+		/**
+		* Bring everything to a halt
+		* @param {Object} params A list of callback functions to pass when all notifications are removed
+		*/  
+		stop: function(params){
+			
+			// callbacks (if passed)
+			var before_close = ($.isFunction(params.before_close)) ? params.before_close : function(){};
+			var after_close = ($.isFunction(params.after_close)) ? params.after_close : function(){};
+			
+			var wrap = $('#gritter-notice-wrapper');
+			before_close(wrap);
+			wrap.fadeOut(function(){
+				$(this).remove();
+				after_close();
+			});
+		
+		},
+		
+		/**
+		* Remove a specific notification based on an ID
+		* @param {Integer} unique_id The ID used to delete a specific notification, can be null if e is specified
+		* @param {Object} params A set of options passed in to determine how to get rid of it
+		* @param {Object} e The jQuery element that we're "fading" then removing, can be null if unique_id is specified
+		* @param {Boolean} unbind_events If we clicked on the (X) we set this to true to unbind mouseenter/mouseleave
+		*/
+		removeSpecific: function(unique_id, params, e, unbind_events){
+			if(!e){
+			   if(!unique_id)
+			   {
+			      throw 'removeSpecific; Either unique_id or e must be specified.';
+			   }
+				var e = $('#gritter-item-' + unique_id);
+			}
+
+			// We set the fourth param to let the _fade function know to 
+			// unbind the "mouseleave" event.  Once you click (X) there's no going back!
+			this._fade(e, unique_id || this._getIdFromElement( e ), params || {}, unbind_events);
+			
+		},
+		
+		_checkMax: function( params ){
+			// check to see that we're not above the maximum currently
+			// if we are, remove the top one
+			var staticItems = $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
+         while( params.maximum  > 0 && staticItems.length > params.maximum )
+         {
+            var p = $.extend( {}, params,  { 
+                                                speed: params.overflow_fade_out_speed,
+                                                collapse_speed: params.overflow_collapse_speed,
+                                                delay_collapse: params.overflow_delay_collapse
+                                            });
+            this.removeSpecific( null, p , staticItems.first()  );
+            staticItems = $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
+         }
 		},
 
 		/**
@@ -262,15 +299,11 @@
 		* @param {Boolean} unbind_events Unbind the mouseenter/mouseleave events if they click (X)
 		*/
 		_fade: function(e, unique_id, params, unbind_events){
-
-			var params = params || {},
-				fade = (typeof(params.fade) != 'undefined') ? params.fade : true,
-				fade_out_speed = params.speed || this.fade_out_speed,
-				collapse_speed = params.collapse_speed || this.collapse_speed,
-				delay_collapse = typeof params.delay_collapse == 'undefined' ? this.delay_collapse : params.delay_collapse,
-				manual_close = unbind_events;
-
-			this['_before_close_' + unique_id](e, manual_close);
+         
+         // store this
+         var _self = this;
+         
+			this['_before_close_' + unique_id](e, unbind_events);
 			
 			// If this is true, then we are coming from clicking the (X)
 			if(unbind_events){
@@ -281,13 +314,13 @@
 			e.removeClass( 'gritter-static' );
 
 			// Fade it out or remove it
-			if(fade){
+			if(params.fade_out){
 
-			   if( delay_collapse ){
+			   if( params.delay_collapse ){
 
-				   e.animate({ opacity: 0 }, fade_out_speed, function(){
-					   e.animate({ height: 0 }, collapse_speed, function(){
-						   Gritter._countRemoveWrapper(unique_id, e, manual_close);
+				   e.animate({ opacity: 0 }, params.fade_out_speed, function(){
+					   e.animate({ height: 0 }, params.collapse_speed, function(){
+						   _self._countRemoveWrapper(unique_id, e, unbind_events);
 					   })
 				   });
 
@@ -297,9 +330,9 @@
 					   opacity: 0,
 					   height: 0
 				   }, {
-				         duration: collapse_speed, 
+				         duration: params.collapse_speed, 
 				         complete: function(){
-				                     Gritter._countRemoveWrapper(unique_id, e, manual_close);
+				                     _self._countRemoveWrapper(unique_id, e, unbind_events);
 				                   },
 				         queue: false
 				   });
@@ -344,28 +377,6 @@
 		},
 		
 		/**
-		* Remove a specific notification based on an ID
-		* @param {Integer} unique_id The ID used to delete a specific notification, can be null if e is specified
-		* @param {Object} params A set of options passed in to determine how to get rid of it
-		* @param {Object} e The jQuery element that we're "fading" then removing, can be null if unique_id is specified
-		* @param {Boolean} unbind_events If we clicked on the (X) we set this to true to unbind mouseenter/mouseleave
-		*/
-		removeSpecific: function(unique_id, params, e, unbind_events){
-			if(!e){
-			   if(!unique_id)
-			   {
-			      throw 'removeSpecific; Either unique_id or e must be specified.';
-			   }
-				var e = $('#gritter-item-' + unique_id);
-			}
-
-			// We set the fourth param to let the _fade function know to 
-			// unbind the "mouseleave" event.  Once you click (X) there's no going back!
-			this._fade(e, unique_id || this._getIdFromElement( e ), params || {}, unbind_events);
-			
-		},
-		
-		/**
 		* Get a growl's unique_id from it's element
 		* @return {Integer} the growl's unique id
 		**/
@@ -391,49 +402,19 @@
 		},
 		
 		/**
-		* Setup the global options - only once
-		* @private
-		*/
-		_runSetup: function(){
-		
-			for(opt in $.gritter.options){
-				this[opt] = $.gritter.options[opt];
-			}
-			this._is_setup = 1;
-			
-		},
-		
-		/**
 		* Set the notification to fade out after a certain amount of time
 		* @private
 		* @param {Object} item The HTML element we're dealing with
 		* @param {Integer} unique_id The ID of the element
+		* @param {Object} the parameters to pass on to the fade sequence
 		*/
-		_setFadeTimer: function(e, unique_id){
+		_setFadeTimer: function(e, unique_id, params){
+			// store this
+			var _self = this;
 			
-			var timer_str = (this._custom_timer) ? this._custom_timer : this.time;
 			this['_int_id_' + unique_id] = setTimeout(function(){ 
-				Gritter._fade(e, unique_id);
-			}, timer_str);
-		
-		},
-		
-		/**
-		* Bring everything to a halt
-		* @param {Object} params A list of callback functions to pass when all notifications are removed
-		*/  
-		stop: function(params){
-			
-			// callbacks (if passed)
-			var before_close = ($.isFunction(params.before_close)) ? params.before_close : function(){};
-			var after_close = ($.isFunction(params.after_close)) ? params.after_close : function(){};
-			
-			var wrap = $('#gritter-notice-wrapper');
-			before_close(wrap);
-			wrap.fadeOut(function(){
-				$(this).remove();
-				after_close();
-			});
+				_self._fade(e, unique_id, params);
+			}, params[ 'time' ] );
 		
 		},
 		
