@@ -32,7 +32,7 @@
       sticky: false, // fade out on it's own?
       image: undefined, // url of an image to show
       
-		position: '',
+		position: 'tr', // {string} 'tl', 'tr', 'br', 'bl', where should the notifications be located?
 		class_name: '', // could be set to 'gritter-light' to use white notifications
       
       fade_out: true, // whether or not to fade out
@@ -136,7 +136,7 @@
 				throw 'You must supply "text" parameter.'; 
 			}
 
-			this._verifyWrapper();
+			this._verifyWrapper( params['position'] );
 			
 			var number = ++this._item_count, 
 				tmp = this._tpl_item;
@@ -166,7 +166,9 @@
 				return false;
 			}
 
-			$('#gritter-notice-wrapper').addClass(params.position).append(tmp);
+			var pos = params['position'];
+			this._isUpper( pos ) ? $('#gritter-notice-wrapper.' + params['position'] ).append(tmp)
+			                           : $('#gritter-notice-wrapper.' + params['position'] ).prepend(tmp);
 			
 			var item = $('#gritter-item-' + this._item_count).addClass( 'gritter-static' );
 			
@@ -177,7 +179,7 @@
 			if(!params.sticky){
 				this._setFadeTimer(item, number, params);
 			}else{
-			   item.addClass( 'sticky' );
+			   item.addClass( 'sticky' ); // for bubbler handler
 			}
 			
 			// Bind the hover/unhover states
@@ -210,8 +212,8 @@
 		* Get the number of currently shown growls
 		* @return {Integer}
 		*/
-		count: function(){
-		   return $('#gritter-notice-wrapper').children().length;
+		count: function( position ){
+		   return $('#gritter-notice-wrapper.' + position).children().length;
 		},
 		
 		/**
@@ -224,7 +226,7 @@
 			var before_close = ($.isFunction(params.before_close)) ? params.before_close : function(){};
 			var after_close = ($.isFunction(params.after_close)) ? params.after_close : function(){};
 			
-			var wrap = $('#gritter-notice-wrapper');
+			var wrap = $('#gritter-notice-wrapper.' + params['position']);
 			before_close(wrap);
 			wrap.fadeOut(function(){
 				$(this).remove();
@@ -255,23 +257,39 @@
 			
 		},
 		
+		/**
+		* Does this container sit at the upper portion or lower portion of the screen?
+		* @param {string} position
+		*/
+		_isUpper:function( position ){
+		   return position == 'tr' || position == 'tl';
+		},
+		
+		/**
+		* Check whether we've exceeded the maximum number of displayed notifications
+		* @param {Object} parameters
+		*/
 		_checkMax: function( params ){
 			// check to see that we're not above the maximum currently
 			// if we are, remove the top one
 			var staticItems = params.overflow_kills_sticky ?
-			                     $( '#gritter-notice-wrapper .gritter-static' ) :
-			                     $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
+			                     $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static' ) :
+			                     $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static:not(.sticky)' );
          while( params.maximum  > 0 && staticItems.length > params.maximum )
          {
+            // special options for overflow situations
             var p = $.extend( {}, params,  { 
                                                 speed: params.overflow_fade_out_speed,
                                                 collapse_speed: params.overflow_collapse_speed,
                                                 delay_collapse: params.overflow_delay_collapse
                                             });
-            this.removeSpecific( null, p , staticItems.first()  );
+            // are we pulling the top or lower
+            var target = this._isUpper( params['position'] ) ? staticItems.first() : staticItems.last();
+            // kill it
+            this.removeSpecific( null, p , target  );
 			   var staticItems = params.overflow_kills_sticky ?
-			                        $( '#gritter-notice-wrapper .gritter-static' ) :
-			                        $( '#gritter-notice-wrapper .gritter-static:not(.sticky)' );
+			                        $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static' ) :
+			                        $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static:not(.sticky)' );
          }
 		},
 
@@ -282,15 +300,15 @@
 		* @param {Object} e The jQuery element that we're going to perform the remove() action on
 		* @param {Boolean} manual_close Did we close the gritter dialog with the (X) button
 		*/
-		_countRemoveWrapper: function(unique_id, e, manual_close){
+		_countRemoveWrapper: function(unique_id, e, position, manual_close){
 			
 			// Remove it then run the callback function
 			e.remove();
 			this['_after_close_' + unique_id](e, manual_close);
 			
 			// Check if the wrapper is empty, if it is.. remove the wrapper
-			if( this.count() == 0){
-				$('#gritter-notice-wrapper').remove();
+			if( this.count( position ) == 0){
+				$('#gritter-notice-wrapper.' + position).remove();
 			}
 		
 		},
@@ -325,7 +343,7 @@
 
 				   e.animate({ opacity: 0 }, params.fade_out_speed, function(){
 					   e.animate({ height: 0 }, params.collapse_speed, function(){
-						   _self._countRemoveWrapper(unique_id, e, unbind_events);
+						   _self._countRemoveWrapper(unique_id, e, params['position'], unbind_events);
 					   })
 				   });
 
@@ -337,7 +355,7 @@
 				   }, {
 				         duration: params.collapse_speed, 
 				         complete: function(){
-				                     _self._countRemoveWrapper(unique_id, e, unbind_events);
+				                     _self._countRemoveWrapper(unique_id, e, params['position'], unbind_events);
 				                   },
 				         queue: false
 				   });
@@ -346,7 +364,7 @@
 			}
 			else {
 				
-				this._countRemoveWrapper(unique_id, e);
+				this._countRemoveWrapper(unique_id, e, params['position']);
 				
 			}
 						
@@ -470,10 +488,10 @@
 		* A check to make sure we have something to wrap our notices with
 		* @private
 		*/  
-		_verifyWrapper: function(){
+		_verifyWrapper: function( position ){
 		  
-			if($('#gritter-notice-wrapper').length == 0){
-				$('body').append(this._tpl_wrap);
+			if($('#gritter-notice-wrapper.' + position).length == 0){
+				$('body').append( $(this._tpl_wrap).addClass( position ) );
 			}
 		
 		}
