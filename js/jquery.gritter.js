@@ -104,7 +104,7 @@
 		_tpl_close: '<div class="gritter-close"></div>',
 		_tpl_title: '<span class="gritter-title">[[title]]</span>',
 		_tpl_item: '<div id="gritter-item-[[number]]" class="gritter-item-wrapper [[item_class]]" style="display:none"><div class="gritter-top"></div><div class="gritter-item">[[close]][[image]]<div class="[[class_name]]">[[title]]<p>[[text]]</p></div><div style="clear:both"></div></div><div class="gritter-bottom"></div></div>',
-		_tpl_wrap: '<div id="gritter-notice-wrapper"></div>',
+		_tpl_wrap: '<div class="gritter-notice-wrapper"></div>',
 		
 		/**
 		* Add a gritter notification to the screen
@@ -167,8 +167,8 @@
 			}
 
 			var pos = params['position'];
-			this._isUpper( pos ) ? $('#gritter-notice-wrapper.' + params['position'] ).append(tmp)
-			                           : $('#gritter-notice-wrapper.' + params['position'] ).prepend(tmp);
+			this._isUpper( pos ) ? $('.gritter-notice-wrapper.' + params['position'] ).append(tmp)
+			                           : $('.gritter-notice-wrapper.' + params['position'] ).prepend(tmp);
 			
 			var item = $('#gritter-item-' + this._item_count).addClass( 'gritter-static' );
 			
@@ -213,22 +213,24 @@
 		* @return {Integer}
 		*/
 		count: function( position ){
-		   return $('#gritter-notice-wrapper.' + position).children().length;
+		   return $('.gritter-notice-wrapper.' + position).children().length;
 		},
 		
 		/**
 		* Bring everything to a halt
 		* @param {Object} params A list of callback functions to pass when all notifications are removed
 		*/  
-		stop: function(params){
+		stop: function( params ){
 			
 			// callbacks (if passed)
 			var before_close = ($.isFunction(params.before_close)) ? params.before_close : function(){};
 			var after_close = ($.isFunction(params.after_close)) ? params.after_close : function(){};
 			
-			var wrap = $('#gritter-notice-wrapper.' + params['position']);
-			before_close(wrap);
-			wrap.fadeOut(function(){
+			// we pass all the currently open wrappers to the callbacks
+			var wraps = $('.gritter-notice-wrapper');
+			console.log( wraps );
+			before_close(wraps);
+			wraps.fadeOut(function(){
 				$(this).remove();
 				after_close();
 			});
@@ -273,8 +275,8 @@
 			// check to see that we're not above the maximum currently
 			// if we are, remove the top one
 			var staticItems = params.overflow_kills_sticky ?
-			                     $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static' ) :
-			                     $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static:not(.sticky)' );
+			                     $( '.gritter-notice-wrapper.' + params['position'] + ' .gritter-static' ) :
+			                     $( '.gritter-notice-wrapper.' + params['position'] + ' .gritter-static:not(.sticky)' );
          while( params.maximum  > 0 && staticItems.length > params.maximum )
          {
             // special options for overflow situations
@@ -288,8 +290,8 @@
             // kill it
             this.removeSpecific( null, p , target  );
 			   var staticItems = params.overflow_kills_sticky ?
-			                        $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static' ) :
-			                        $( '#gritter-notice-wrapper.' + params['position'] + ' .gritter-static:not(.sticky)' );
+			                        $( '.gritter-notice-wrapper.' + params['position'] + ' .gritter-static' ) :
+			                        $( '.gritter-notice-wrapper.' + params['position'] + ' .gritter-static:not(.sticky)' );
          }
 		},
 
@@ -308,7 +310,7 @@
 			
 			// Check if the wrapper is empty, if it is.. remove the wrapper
 			if( this.count( position ) == 0){
-				$('#gritter-notice-wrapper.' + position).remove();
+				$('.gritter-notice-wrapper.' + position).remove();
 			}
 		
 		},
@@ -490,7 +492,7 @@
 		*/  
 		_verifyWrapper: function( position ){
 		  
-			if($('#gritter-notice-wrapper.' + position).length == 0){
+			if($('.gritter-notice-wrapper.' + position).length == 0){
 				$('body').append( $(this._tpl_wrap).addClass( position ) );
 			}
 		
