@@ -73,7 +73,7 @@
 				
 		}
 		
-	}
+	};
 	
 	/**
 	* Remove a gritter notification from the screen
@@ -81,7 +81,7 @@
 	*/
 	$.gritter.remove = function(id, params){
 		$.gritter._implementation.removeSpecific(id, params || {});
-	}
+	};
 	
 	/**
 	* Remove all notifications
@@ -89,7 +89,7 @@
 	*/
 	$.gritter.removeAll = function(params){
 		$.gritter._implementation.stop(params || {});
-	}
+	};
 	
 	/**
 	* Big fat Gritter object
